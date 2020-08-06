@@ -380,6 +380,7 @@
     <ClInclude Include="patching.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="skse.h" />
+    <ClInclude Include="tasks.h" />
     <ClInclude Include="version.h" />
   </ItemGroup>
   <ItemGroup>

@@ -34,6 +34,7 @@
 #include "patching.h"
 #include "logging.h"
 #include "skse.h"
+#include "tasks.h"
 #include "cbp.h"
 #include "cbp_papyrus.h"
 #include "cbp_configobs.h"

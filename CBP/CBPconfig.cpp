@@ -11,7 +11,7 @@ namespace CBP
         "stiffness2",
         "damping",
         "maxoffset",
-        "timetick",
+        "timestep",
         "linearx",
         "lineary",
         "linearz",

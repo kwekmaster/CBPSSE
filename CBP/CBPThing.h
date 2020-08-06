@@ -11,13 +11,13 @@ namespace CBP
 		NiPoint3 velocity;
 		long long time;
 
+		float m_timeAccum;
+
 		NiPoint3 npCogOffset;
 		NiPoint3 npGravityCorrection;
 		NiPoint3 npZero;
 
-		float diffMult;
-		int numSteps;
-
+		float dampingForce;
 	public:
 		float stiffness = 0.5f;
 		float stiffness2 = 0.0f;
@@ -27,12 +27,12 @@ namespace CBP
 		float gravityBias = 0.0f;
 		float gravityCorrection = 0.0f;
 		//float zOffset = 0.0f;	// Computed based on GravityBias value
-		float timeTick = 4.0f;
 		float linearX = 0;
 		float linearY = 0;
 		float linearZ = 0;
 		float rotational = 0.1;
 		float timeScale = 1.0f;
+		float timeStep = 1.0f / 60.0f;
 
 		Thing(NiAVObject* obj, BSFixedString& name);
 

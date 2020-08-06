@@ -5,7 +5,7 @@
 namespace CBP
 {
     Thing::Thing(NiAVObject* obj, BSFixedString& name)
-        : boneName(name)
+        : boneName(name), m_timeAccum(0.0f)
     {
         time = PerfCounter::Query();
         oldWorldPos = obj->m_worldTransform.pos;
@@ -17,9 +17,16 @@ namespace CBP
         stiffness2 = centry["stiffness2"];
         damping = centry["damping"];
         maxOffset = centry["maxoffset"];
-        timeTick = centry["timetick"];
-        if (timeTick < 1.0f)
-            timeTick = 1.0f;
+        
+        auto it = centry.find("timestep");
+        if (it != centry.end()) {
+            timeStep = it->second;
+
+            if (timeStep > 1.0f)
+                timeStep = 1.0f;
+        }
+        else 
+            timeStep = 0.01666667f;
 
         linearX = centry["linearx"];
         linearY = centry["lineary"];
@@ -37,15 +44,10 @@ namespace CBP
 
         //zOffset = solveQuad(stiffness2, stiffness, -gravityBias);
 
-        timeTick = roundf(timeTick);
-        if (timeTick < 1.0f)
-            timeTick = 1.0f;
-        
-        numSteps = static_cast<int>(timeTick);
-
-        diffMult = 1.0f / timeTick;
         npCogOffset = NiPoint3(0.0f, cogOffset, 0.0f);
         npGravityCorrection = NiPoint3(0.0f, 0.0f, gravityCorrection);
+
+        dampingForce = damping * timeStep;
     }
 
     __forceinline static
@@ -71,8 +73,8 @@ namespace CBP
         auto deltaT = PerfCounter::delta(time, newTime);
         time = newTime;
 
-        if (deltaT > 0.066f)
-            deltaT = 0.066f;
+        if (deltaT > 1.0f)
+            deltaT = 1.0f;
         
         auto obj = actor->loadedState->node->GetObjectByName(&boneName.data);
         if (obj == NULL)
@@ -80,65 +82,67 @@ namespace CBP
 
         NiPoint3 target = obj->m_parent->m_worldTransform * npCogOffset;
 
-        NiPoint3 diff = target - oldWorldPos;
+        m_timeAccum += deltaT * timeScale;
 
-        if (fabs(diff.x) > 100.0f || fabs(diff.y) > 100.0f || fabs(diff.z) > 100.0f)
+        while (m_timeAccum >= timeStep)
         {
-            obj->m_localTransform.pos = npZero;
-            oldWorldPos = target;
-            velocity = npZero;
-            time = PerfCounter::Query();
-        }
-        else
-        {
-            diff *= diffMult;
-            //NiPoint3 posDelta(0.0f, 0.0f, 0.0f);
+            NiPoint3 diff = target - oldWorldPos;
 
-            // Compute the "Spring" Force
-            NiPoint3 diff2(diff.x * diff.x * sgn(diff.x), diff.y * diff.y * sgn(diff.y), diff.z * diff.z * sgn(diff.z));
-            NiPoint3 springForce = (diff * stiffness) + (diff2 * stiffness2);
+            if (fabs(diff.x) > 100.0f || fabs(diff.y) > 100.0f || fabs(diff.z) > 100.0f)
+            {
+                obj->m_localTransform.pos = npZero;
+                oldWorldPos = target;
+                velocity = npZero;
+                time = PerfCounter::Query();
+                m_timeAccum = 0.0f;
+                break;
+            }
+            else
+            {
+                //NiPoint3 posDelta(0.0f, 0.0f, 0.0f);
 
-            springForce.z -= gravityBias;
+                // Compute the "Spring" Force
+                NiPoint3 diff2(diff.x * diff.x * sgn(diff.x), diff.y * diff.y * sgn(diff.y), diff.z * diff.z * sgn(diff.z));
+                NiPoint3 springForce = (diff * stiffness) + (diff2 * stiffness2);
 
-            auto timeStep = deltaT * timeScale;
-            auto dampingBias = ((timeStep * timeStep) * 3.0f) * 100.0f;
-            auto force = springForce * timeStep;
-            auto dampingForce = (damping + dampingBias) * timeStep;
+                springForce.z -= gravityBias;
 
-            int c = numSteps;
-            auto newPos = oldWorldPos;
+                auto force = springForce * timeStep;
 
-            do {
+                auto newPos = oldWorldPos;
+
                 // Assume mass is 1, so Accelleration is Force, can vary mass by changing springForce
                 //velocity = (velocity + (springForce * timeStep)) * (1.0f - (conf.damping * timeStep));
 
                 velocity += force - (velocity * dampingForce);
                 newPos += velocity * timeStep;
 
-                c--;
-            } while (c > 0);
+                //auto newPos = oldWorldPos + posDelta;
+                // clamp the difference to stop the breast severely lagging at low framerates
+                diff = newPos - target;
+                diff.x = clamp(diff.x, -maxOffset, maxOffset);
+                diff.y = clamp(diff.y, -maxOffset, maxOffset);
+                diff.z = clamp(diff.z, -maxOffset, maxOffset);
 
-            //auto newPos = oldWorldPos + posDelta;
-            // clamp the difference to stop the breast severely lagging at low framerates
-            diff = newPos - target;
-            diff.x = clamp(diff.x, -maxOffset, maxOffset);
-            diff.y = clamp(diff.y, -maxOffset, maxOffset);
-            diff.z = clamp(diff.z, -maxOffset, maxOffset);
+                // move the bones based on the supplied weightings
+                // Convert the world translations into local coordinates
+                auto invRot = obj->m_parent->m_worldTransform.rot.Transpose();
+                auto ldiff = invRot * diff;
 
-            // move the bones based on the supplied weightings
-            // Convert the world translations into local coordinates
-            auto invRot = obj->m_parent->m_worldTransform.rot.Transpose();
-            auto ldiff = invRot * diff;
+                oldWorldPos = (obj->m_parent->m_worldTransform.rot * ldiff) + target;
 
-            oldWorldPos = (obj->m_parent->m_worldTransform.rot * ldiff) + target;
+                obj->m_localTransform.pos.x = ldiff.x * linearX;
+                obj->m_localTransform.pos.y = ldiff.y * linearY;
+                obj->m_localTransform.pos.z = ldiff.z * linearZ;
 
-            obj->m_localTransform.pos.x = ldiff.x * linearX;
-            obj->m_localTransform.pos.y = ldiff.y * linearY;
-            obj->m_localTransform.pos.z = ldiff.z * linearZ;
+                obj->m_localTransform.pos += invRot * npGravityCorrection;
 
-            obj->m_localTransform.pos += invRot * npGravityCorrection;
+                obj->m_localTransform.rot.SetEulerAngles(0.0f, 0.0f, ldiff.z * rotational);
+            }
 
-            obj->m_localTransform.rot.SetEulerAngles(0.0f, 0.0f, ldiff.z * rotational);
+            m_timeAccum -= timeStep;
         }
+
+        
     }
 }

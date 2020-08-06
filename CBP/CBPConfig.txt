@@ -11,10 +11,7 @@ Breast.stiffness2 10.0
 # Velocity removed/tick 1.0 would be all velocity removed 
 Breast.damping 0.92
 
-# Time Quanta for the physics in ms 4 means that a 16ms frame would be broken down into 4 4ms steps
-Breast.timetick 4
 
-# Time Quanta for the physics in ms 4 means that a 16ms frame would be broken down into 4 4ms steps
 Breast.maxoffset 20
 
 # Scale of the motion in X/Y/Z - Y is front to back, Z up and down and X side to side
@@ -26,6 +23,7 @@ Breast.linearZ 0.3
 Breast.rotational 0.03
 
 Breast.timeScale 1.0
+Breast.timeStep 0.01111111
 
 # The ammount that the breast COG is forwards of the bone root, changes how rotation will impact motion
 # Skyrim units are obtuse to say the least, there is no physical equivalent
@@ -48,9 +46,9 @@ Butt.damping 0.999
 
 Butt.stiffness 5
 Butt.stiffness2 10
-Butt.timetick 4
 
 Butt.timeScale 1.0
+Butt.timeStep 0.01111111
 Butt.cogOffset 10.0
 Butt.gravityBias 60
 Butt.gravityCorrection 8
@@ -65,9 +63,9 @@ Belly.damping 1
 
 Belly.stiffness 5
 Belly.stiffness2 5
-Belly.timetick 4
 
 Belly.timeScale 1.0
+Belly.timeStep 0.01111111
 Belly.cogOffset 0.0
 Belly.gravityBias 0
 Belly.gravityCorrection 0.0
