@@ -7,7 +7,7 @@ namespace CBP
 
     void QueueConfigReload()
     {
-        ITask::AddTask(&g_confReloadTask);
+        DTasks::AddTask(&g_confReloadTask);
     }
 
     static void MessageHandler(SKSEMessagingInterface::Message* message)
@@ -40,12 +40,12 @@ namespace CBP
             return false;
         }
 
-        if (!ITask::Initialize()) {
+        if (!DTasks::Initialize()) {
             _FATALERROR("Couldn't intitialize task interface");
             return false;
         }
 
-        ITask::AddTaskFixed(std::addressof(g_updateTask));
+        DTasks::AddTaskFixed(std::addressof(g_updateTask));
 
         SKSE::g_messaging->RegisterListener(SKSE::g_pluginHandle, "SKSE", MessageHandler);
         SKSE::g_papyrus->Register(CBP::RegisterFuncs);

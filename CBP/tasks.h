@@ -1,6 +1,6 @@
 #pragma once
 
-class ITask
+class DTasks
 {
     typedef void (*RTTaskEnter_t)(void);
 public:
@@ -9,9 +9,14 @@ public:
 
     static bool Initialize();
 private:
-    ITask() = default;
+    DTasks() = default;
 
-    static void RTTaskEnter_Hook();
+    static void TaskInterface1_Hook(BSTaskPool* taskpool);
+    static void TaskInterface2_Hook(BSTaskPool* taskpool);
+
+    static void TaskInit_Hook();
+
+    static void RunTasks();
 
     static std::vector<TaskDelegateFixed*> s_tasks_fixed;
     static TaskQueue s_tasks;
